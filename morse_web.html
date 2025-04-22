@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Morse Code Web Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    textarea {
+      width: 300px;
+      height: 100px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 10px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h2>Morse Code Web Interface</h2>
+  <textarea id="textInput" placeholder="Type message..."></textarea><br>
+  <button id="connectButton">🔌 Connect to Arduino</button>
+  <button id="sendButton" disabled>📤 Send Text</button>
+  <button id="resetButton" disabled>🧹 Reset Input</button>
+  <p id="status">Not connected</p>
+
+  <script>
+    let port;
+    let writer;
+
+    document.getElementById("connectButton").addEventListener("click", async () => {
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+
+        const encoder = new TextEncoderStream();
+        encoder.readable.pipeTo(port.writable);
+        writer = encoder.writable.getWriter();
+
+        document.getElementById("status").textContent = "✅ Connected";
+        document.getElementById("sendButton").disabled = false;
+        document.getElementById("resetButton").disabled = false;
+      } catch (err) {
+        console.error("Connection failed", err);
+        document.getElementById("status").textContent = "❌ Connection failed";
+      }
+    });
+
+    document.getElementById("sendButton").addEventListener("click", async () => {
+      const text = document.getElementById("textInput").value;
+      if (writer && text.trim() !== "") {
+        await writer.write(text + "\n");
+        document.getElementById("status").textContent = "✅ Text sent!";
+      }
+    });
+
+    document.getElementById("resetButton").addEventListener("click", async () => {
+      if (writer) {
+        await writer.write("!RESET\n");
+        document.getElementById("status").textContent = "🔄 Reset command sent!";
+      }
+    });
+  </script>
+</body>
+</html>
